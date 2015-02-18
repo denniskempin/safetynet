@@ -122,10 +122,13 @@ class InterfaceMeta(TypecheckMeta):
 
 def _FormatTypeCheck(type_):
   """Pretty format of type check."""
-  if isinstance(type_, TypeChecker):
-    return repr(type_)
-  else:
+  if isinstance(type_, tuple):
+    items = [_FormatTypeCheck(t) for t in type_]
+    return "(%s)" % ", ".join(items)
+  elif hasattr(type_, "__name__"):
     return type_.__name__
+  else:
+    return repr(type_)
 
 class TypeChecker(object):
   """Baseclass for all TypeCheckers."""
@@ -211,15 +214,26 @@ class Mapping(TypeChecker):
     ])
     return "Mapping(%s)" % subtype
 
+def _ValidateTuple(value, type_check_tuple):
+  if not isinstance(value, tuple):
+    return False
+  if len(value) != len(type_check_tuple):
+    return False
+  for item, type_check in zip(value, type_check_tuple):
+    if not _ValidateValue(item, type_check):
+      return False
+  return True
 
 def _ValidateValue(value, type_check):
   """Validate a single value with type_check."""
   if inspect.isclass(type_check):
     return isinstance(value, type_check)
+  if isinstance(type_check, tuple):
+    return _ValidateTuple(value, type_check)
   elif callable(type_check):
     return type_check(value)
   else:
-    raise TypeError("Invalid type")
+    raise TypeError("Invalid type check '%s'" % repr(type_check))
 
 
 def _ParseTypeCheckString(type_check_string, stack_location, self_name):

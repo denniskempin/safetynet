@@ -1,7 +1,8 @@
 import unittest
 from collections import OrderedDict
 
-from safetynet import typecheck, Iterable, Mapping, Optional, InterfaceMeta
+from safetynet import (typecheck, Iterable, Mapping, Optional, InterfaceMeta,
+                       _ValidateValue)
 
 class CustomType(object):
   pass
@@ -220,3 +221,11 @@ class TypeCheckTests(unittest.TestCase):
       __metaclass__ = InterfaceMeta
       variable = 1
     self.assertEqual(VariablesExample.variable, 1)
+
+  def test_tuple_check(self):
+    self.assertTrue(_ValidateValue((1, "str"), (int, str)))
+    self.assertTrue(_ValidateValue(None, Optional((int, str))))
+
+    self.assertFalse(_ValidateValue(("1", "str"), (int, str)))
+    self.assertFalse(_ValidateValue((1, "str", 3), (int, str)))
+    self.assertFalse(_ValidateValue((), (int, str)))
