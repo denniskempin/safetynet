@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 
-param_regexp_str = "^\s*:param\s+([^:]*?)([^\s:]+):\s*(.*?)\s*$"
+param_regexp_str = "^\s*:param\s([^:\n\r]+).*$"
 param_regexp = re.compile(param_regexp_str, re.MULTILINE)
 
 returns_regexp_str = "^\s*:returns\s+([^:]+):\s*(.*?)\s*$"
@@ -38,29 +38,46 @@ class TypecheckMeta(abc.ABCMeta):
   """
   def __new__(cls, class_name, parents, dct):
     typecheck_parent = cls.FindTypecheckParent(parents)
-    for name, member in cls.ListMethodsOfInterest(dct):
+    for name, member in cls.ListMembersOfInterest(dct):
       parent_member = cls.FindParentMember(typecheck_parent, name)
       dct[name] = cls.Decorate(class_name, member, parent_member)
 
     return abc.ABCMeta.__new__(cls, class_name, parents, dct)
 
   @classmethod
-  def ListMethodsOfInterest(cls, dct):
+  def ListMembersOfInterest(cls, dct):
     for name, member in dct.items():
-      if inspect.isfunction(member) and not name.endswith("__"):
+      if inspect.isfunction(member) and (not name.endswith("__") or
+                                         name == "__init__"):
+        yield name, member
+      if isinstance(member, property):
         yield name, member
 
   @classmethod
   def Decorate(cls, class_name, member, parent_member):
     """Decorates a member with @typecheck. Inherit checks from parent member."""
-    if hasattr(member, "type_check_dict"):
-      return member
+    if isinstance(member, property):
+      fget = cls.DecorateMethod(class_name, member.fget, parent_member)
+      fset = None
+      if member.fset:
+        fset = cls.DecorateMethod(class_name, member.fset, parent_member)
+      fdel = None
+      if member.fdel:
+        fdel = cls.DecorateMethod(class_name, member.fdel, parent_member)
+      return property(fget, fset, fdel, member.__doc__)
+    else:
+      return cls.DecorateMethod(class_name, member, parent_member)
+
+  @classmethod
+  def DecorateMethod(cls, class_name, method, parent_member):
+    if hasattr(method, "type_check_dict"):
+      return method
 
     parent_type_check_dict = {}
     if parent_member and hasattr(parent_member, "type_check_dict"):
       parent_type_check_dict = parent_member.type_check_dict
 
-    return _TypecheckFunction(member, parent_type_check_dict, 3, class_name)
+    return _TypecheckFunction(method, parent_type_check_dict, 3, class_name)
 
   @classmethod
   def FindTypecheckParent(cls, parents):
@@ -88,7 +105,7 @@ class InterfaceMeta(TypecheckMeta):
   def __new__(cls, class_name, parents, dct):
     typecheck_parent = cls.FindTypecheckParent(parents)
 
-    for name, member in cls.ListMethodsOfInterest(dct):
+    for name, member in cls.ListMembersOfInterest(dct):
       parent_member = cls.FindParentMember(typecheck_parent, name)
       if typecheck_parent:
         cls.CheckOverridenArgumentNames(class_name, member, parent_member)
@@ -269,9 +286,13 @@ def _ParseDocstring(function):
 
   type_check_dict = {}
   for match in param_regexp.finditer(function.__doc__):
-    type_str = match.group(1)
-    name = match.group(2)
-    type_check_dict[name] = type_str
+    param_str = match.group(1).strip()
+    param_splitted = param_str.split(" ")
+    if len(param_splitted) >= 2:
+      type_str = " ".join(param_splitted[:-1])
+      name = param_splitted[-1]
+      type_check_dict[name] = type_str
+
   for match in returns_regexp.finditer(function.__doc__):
     type_check_dict["returns"] = match.group(1)
 

@@ -1,8 +1,9 @@
-import unittest
 from collections import OrderedDict
+import unittest
 
-from safetynet import (typecheck, Iterable, Mapping, Optional, InterfaceMeta,
-                       _ValidateValue)
+from safetynet import (InterfaceMeta, Iterable, Mapping, Optional,
+                                 _ValidateValue, typecheck)
+
 
 class CustomType(object):
   pass
@@ -134,9 +135,9 @@ class TypeCheckTests(unittest.TestCase):
 
         :param CustomType a: description
         :param Iterable(int) b: description
-        :param Mapping(str, int) c: description
+        :param Mapping(str, int) c
         :param callable d: description
-        :param Optional(int) e: description
+        :param Optional(int) e
         :returns int: description
       """
       return return_
@@ -215,6 +216,38 @@ class TypeCheckTests(unittest.TestCase):
         def public_method_not_defined_in_interface(self):
           pass
     self.assertRaises(TypeError, DefineClass)
+
+  def test_object_init_check(self):
+    class Example(object):
+      __metaclass__ = InterfaceMeta
+      def __init__(self, a, b):
+        """
+        :param bool a:
+        :param str b:
+        """
+    Example(False, "str")
+    self.assertRaises(TypeError, lambda: Example(True, 1))
+    self.assertRaises(TypeError, lambda: Example(1, "str"))
+
+  def test_property_check(self):
+    class Example(object):
+      __metaclass__ = InterfaceMeta
+      @property
+      def valid(self):
+        """
+        :returns int:
+        """
+        return 42
+      @property
+      def invalid(self):
+        """
+        :returns int:
+        """
+        return "42"
+
+    instance = Example()
+    self.assertEqual(instance.valid, 42)
+    self.assertRaises(TypeError, lambda: instance.invalid)
 
   def test_class_variables_untouched(self):
     class VariablesExample:
