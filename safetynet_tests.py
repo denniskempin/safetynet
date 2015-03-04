@@ -2,8 +2,8 @@ from collections import OrderedDict
 import unittest
 
 from safetynet import (InterfaceMeta, Iterable, Mapping, Optional,
-                                 _ValidateValue, typecheck)
-
+                       _ValidateValue, typecheck)
+from typing import Union, List
 
 class CustomType(object):
   pass
@@ -25,7 +25,7 @@ def DefineTypeCheckExample():
       """ Docstring
 
         :type a: CustomType
-        :type b: Iterable(int)
+        :type b: List[int]
         :type c: Mapping(str, int)
         :type d: callable
         :type e: Optional(int)

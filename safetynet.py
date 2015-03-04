@@ -77,7 +77,7 @@ class TypecheckMeta(abc.ABCMeta):
     if parent_member and hasattr(parent_member, "type_check_dict"):
       parent_type_check_dict = parent_member.type_check_dict
 
-    return _TypecheckFunction(method, parent_type_check_dict, 3, class_name)
+    return _TypecheckFunction(method, parent_type_check_dict, 4, class_name)
 
   @classmethod
   def FindTypecheckParent(cls, parents):

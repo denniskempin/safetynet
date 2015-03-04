@@ -29,7 +29,7 @@ setup(name='safetynet',
       version=version,
       download_url='%s/tarball/%s' % (url, version),
 
-      packages=find_packages('.'),
+      py_modules=['safetynet'],
       install_requires=[],
       tests_require=['nose2'],
       entry_points={},
