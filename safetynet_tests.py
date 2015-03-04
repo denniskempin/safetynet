@@ -1,9 +1,9 @@
 from collections import OrderedDict
 import unittest
 
-from safetynet import (InterfaceMeta, Iterable, Mapping, Optional,
+from safetynet import (Dict, InterfaceMeta, List, Optional, Tuple,
                        _ValidateValue, typecheck)
-from typing import Union, List
+
 
 class CustomType(object):
   pass
@@ -26,15 +26,15 @@ def DefineTypeCheckExample():
 
         :type a: CustomType
         :type b: List[int]
-        :type c: Mapping(str, int)
+        :type c: Dict[str, int]
         :type d: callable
-        :type e: Optional(int)
+        :type e: Optional[int]
         :rtype: int
       """
       return return_
 
-    @typecheck(a=CustomType, b=Iterable(int), c=Mapping(str, int),
-           d=callable, e=Optional(int), returns=int)
+    @typecheck(a=CustomType, b=List[int], c=Dict[str, int],
+           d=callable, e=Optional[int], returns=int)
     def annotation_example(self, a, b, c, d, e, return_):
       return return_
 
@@ -55,10 +55,10 @@ class TypeCheckTests(unittest.TestCase):
     """ Assumes function has the following type checks and tests them.
 
       a: CustomType
-      b: Iterable(int)
-      c: Mapping(str, int)
+      b: List[int]
+      c: Dict[str, int]
       d: callable
-      e: Optional(int)
+      e: Optional[int]
       return value: int
 
       The function should return the argument: return_
@@ -83,13 +83,13 @@ class TypeCheckTests(unittest.TestCase):
     assert_failure(a=1)
     assert_failure(a=None)
 
-    # Test Iterable(int)
+    # Test List[int]
     assert_success(b=[1, 2, 3])
     assert_failure(b=[1.0])
     assert_failure(b=[1, None, 3])
     assert_failure(b=None)
 
-    # Test Mapping(str, int)
+    # Test Dict[str, int]
     assert_success(c={"key": 1})
     assert_failure(c={"key": None})
     assert_failure(c={"key": "1"})
@@ -105,7 +105,7 @@ class TypeCheckTests(unittest.TestCase):
     assert_failure(d=None)
     assert_failure(d=1)
 
-    # Test Optional(int)
+    # Test Optional[int]
     assert_success(e=1)
     assert_success(e=None)
     assert_failure(e=1.0)
@@ -115,15 +115,15 @@ class TypeCheckTests(unittest.TestCase):
     assert_failure(return_=None)
 
   def test_type_annotation(self):
-    @typecheck(a=CustomType, b=Iterable(int), c=Mapping(str, int),
-           d=callable, e=Optional(int), returns=int)
+    @typecheck(a=CustomType, b=List[int], c=Dict[str, int],
+           d=callable, e=Optional[int], returns=int)
     def test_function(a, b, c, d, e, return_):
       return return_
     self.assert_correct_example_type_checks(test_function)
 
   def test_string_type_annotation(self):
-    @typecheck(a="CustomType", b="Iterable(int)", c="Mapping(str, int)",
-           d="callable", e="Optional(int)", returns="int")
+    @typecheck(a="CustomType", b="List[int]", c="Dict[str, int]",
+           d="callable", e="Optional[int]", returns="int")
     def test_function(a, b, c, d, e, return_):
       return return_
     self.assert_correct_example_type_checks(test_function)
@@ -134,10 +134,10 @@ class TypeCheckTests(unittest.TestCase):
       """ Docstring
 
         :param CustomType a: description
-        :param Iterable(int) b: description
-        :param Mapping(str, int) c
+        :param List[int] b: description
+        :param Dict[str, int] c
         :param callable d: description
-        :param Optional(int) e
+        :param Optional[int] e
         :returns int: description
       """
       return return_
@@ -149,10 +149,10 @@ class TypeCheckTests(unittest.TestCase):
       """ Docstring
 
         :type a: CustomType
-        :type b: Iterable(int)
-        :type c: Mapping(str, int)
+        :type b: List[int]
+        :type c: Dict[str, int]
         :type d: callable
-        :type e: Optional(int)
+        :type e: Optional[int]
         :rtype: int
       """
       return return_
@@ -256,9 +256,9 @@ class TypeCheckTests(unittest.TestCase):
     self.assertEqual(VariablesExample.variable, 1)
 
   def test_tuple_check(self):
-    self.assertTrue(_ValidateValue((1, "str"), (int, str)))
-    self.assertTrue(_ValidateValue(None, Optional((int, str))))
+    self.assertTrue(_ValidateValue((1, "str"), Tuple[int, str]))
+    self.assertTrue(_ValidateValue(None, Optional[Tuple[int, str]]))
 
-    self.assertFalse(_ValidateValue(("1", "str"), (int, str)))
-    self.assertFalse(_ValidateValue((1, "str", 3), (int, str)))
-    self.assertFalse(_ValidateValue((), (int, str)))
+    self.assertFalse(_ValidateValue(("1", "str"), Tuple[int, str]))
+    self.assertFalse(_ValidateValue((1, "str", 3), Tuple[int, str]))
+    self.assertFalse(_ValidateValue((), Tuple[int, str]))

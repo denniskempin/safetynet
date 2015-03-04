@@ -5,10 +5,12 @@ import abc
 
 __all__ = [
   "typecheck",
-  "Iterable",
-  "Mapping",
+  "List",
+  "Dict",
   "Optional",
   "Typename",
+  "Any",
+  "Tuple",
   "TypeChecker",
   "TypecheckMeta",
   "InterfaceMeta"
@@ -147,11 +149,23 @@ def _FormatTypeCheck(type_):
   else:
     return repr(type_)
 
+
 class TypeChecker(object):
   """Baseclass for all TypeCheckers."""
   pass
 
-class Optional(TypeChecker):
+
+class TypeCheckerFactory(object):
+  def __init__(self, type_check_type):
+    self.type_check_type = type_check_type
+
+  def __getitem__(self, args_tuple):
+    if not isinstance(args_tuple, tuple):
+      args_tuple = (args_tuple,)
+    return self.type_check_type(*args_tuple)
+
+
+class OptionalChecker(TypeChecker):
   """Allows either None or subtype."""
   def __init__(self, subtype=None):
     self.subtype = subtype
@@ -162,10 +176,24 @@ class Optional(TypeChecker):
     return True
 
   def __repr__(self):
-    return "Optional(%s)" % (_FormatTypeCheck(self.subtype)
+    return "Optional[%s]" % (_FormatTypeCheck(self.subtype)
                              if self.subtype else "")
 
-class Typename(TypeChecker):
+Optional = TypeCheckerFactory(OptionalChecker)
+
+
+class AnyChecker(TypeChecker):
+  """Allows either None or subtype."""
+  def __call__(self, value):
+    return value is not None
+
+  def __repr__(self):
+    return "Any"
+
+Any = AnyChecker()
+
+
+class TypenameChecker(TypeChecker):
   """Allows only objects of a type with the name type_name."""
   def __init__(self, type_name=None):
     self.type_name = type_name
@@ -176,10 +204,12 @@ class Typename(TypeChecker):
     return True
 
   def __repr__(self):
-    return "Typename(%s)" % self.type_name
+    return "Typename[%s]" % self.type_name
+
+Typename = TypeCheckerFactory(TypenameChecker)
 
 
-class Iterable(TypeChecker):
+class ListChecker(TypeChecker):
   """Allows only iterable objects with all items being of item_type.
 
   If item_type is none, any item type is allowed.
@@ -198,10 +228,40 @@ class Iterable(TypeChecker):
 
   def __repr__(self):
     subtype = _FormatTypeCheck(self.item_type) if self.item_type else ""
-    return "Iterable(%s)" % subtype
+    return "Iterable[%s]" % subtype
+
+List = TypeCheckerFactory(ListChecker)
 
 
-class Mapping(TypeChecker):
+class TupleChecker(TypeChecker):
+  """Allows only iterable objects with all items being of item_type.
+
+  If item_type is none, any item type is allowed.
+  """
+  def __init__(self, *item_types):
+    self.item_types = item_types
+
+  def __call__(self, value):
+    if not isinstance(value, tuple):
+      return False
+    if len(self.item_types) == 0:
+      return True
+    if len(self.item_types) != len(value):
+      return False
+
+    for item, item_type in zip(value, self.item_types):
+      if not _ValidateValue(item, item_type):
+        return False
+    return True
+
+  def __repr__(self):
+    subtypes = [_FormatTypeCheck(item_type) for item_type in self.item_types]
+    return "Tuple[%s]" % (", ".join(subtypes))
+
+Tuple = TypeCheckerFactory(TupleChecker)
+
+
+class DictChecker(TypeChecker):
   """Allows only mapping (dict) objects with additional checks on each item.
 
   If key_type is specified, all keys have to be of that type.
@@ -229,7 +289,7 @@ class Mapping(TypeChecker):
         _FormatTypeCheck(self.key_type) if self.key_type else "",
         _FormatTypeCheck(self.value_type) if self.value_type else ""
     ])
-    return "Mapping(%s)" % subtype
+    return "Dict[%s]" % subtype
 
 def _ValidateTuple(value, type_check_tuple):
   if not isinstance(value, tuple):
@@ -252,6 +312,8 @@ def _ValidateValue(value, type_check):
   else:
     raise TypeError("Invalid type check '%s'" % repr(type_check))
 
+Dict = TypeCheckerFactory(DictChecker)
+
 
 def _ParseTypeCheckString(type_check_string, stack_location, self_name):
   """Convert string version of a type_check into a python instance.
@@ -270,7 +332,7 @@ def _ParseTypeCheckString(type_check_string, stack_location, self_name):
   target_frame = inspect.stack()[stack_location][0]
   self_name = self_name or inspect.stack()[stack_location][3]
   eval_globals = target_frame.f_globals
-  eval_locals = {self_name: Typename(self_name)}
+  eval_locals = {self_name: Typename[self_name]}
 
   try:
     return eval(type_check_string, eval_globals, eval_locals)
