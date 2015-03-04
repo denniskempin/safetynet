@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = "0.1"
+version = "0.2"
 url = 'https://github.com/denniskempin/safetynet'
 description = ("Type documentation and checking for python")
 
