@@ -109,8 +109,9 @@ class InterfaceMeta(TypecheckMeta):
 
     for name, member in cls.ListMembersOfInterest(dct):
       parent_member = cls.FindParentMember(typecheck_parent, name)
-      if typecheck_parent:
-        cls.CheckOverridenArgumentNames(class_name, member, parent_member)
+      if typecheck_parent and name != "__init__":
+        cls.CheckOverridenArgumentNames(class_name, member, parent_member,
+                                        typecheck_parent)
         cls.CheckUndefinedPublicMethod(class_name, name,
                                        typecheck_parent.__name__,
                                        parent_member)
@@ -121,7 +122,8 @@ class InterfaceMeta(TypecheckMeta):
     return abc.ABCMeta.__new__(cls, class_name, parents, dct)
 
   @classmethod
-  def CheckOverridenArgumentNames(cls, class_name, member, parent_member):
+  def CheckOverridenArgumentNames(cls, class_name, member, parent_member,
+                                  typecheck_parent):
     if parent_member and hasattr(parent_member, "wrapped_function"):
       parent_arg_names = inspect.getargspec(parent_member.wrapped_function)[0]
       arg_names = inspect.getargspec(member)[0]

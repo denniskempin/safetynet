@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = "0.2"
+version = "0.2.1"
 url = 'https://github.com/denniskempin/safetynet'
 description = ("Type documentation and checking for python")
 
@@ -30,6 +30,8 @@ setup(name='safetynet',
       download_url='%s/tarball/%s' % (url, version),
 
       py_modules=['safetynet'],
+      package_data={'': ['README.md']},
+      include_package_data=True,
       install_requires=[],
       tests_require=['nose2'],
       entry_points={},
