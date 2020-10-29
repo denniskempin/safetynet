@@ -1,4 +1,4 @@
-# safetynet
+# safetynet (Deprecated in favor of PEP 484)
 Type documentation and checking for python
 
 ## Motivation
